@@ -1,12 +1,14 @@
+from os import times
 from hubspot import HubSpot
 from hubspot.crm.deals import ApiException
 import pandas as pd
+import json
+from datetime import datetime
 
+# Private App or OAuth Token (From App Distribution)
+ACCESS_TOKEN = "pat-na2-xxxxxxx"  
 
-# Private App or OAuth Token
-ACCESS_TOKEN = "pat-na2-xxxxxx"  
-
-# Initialize the HubSpot client
+# Initialize the HubSpot client 
 try:
     client = HubSpot(access_token=ACCESS_TOKEN)
 except Exception as e:
@@ -19,7 +21,7 @@ def get_all_deals():
     """
     all_deals = []
     after = None
-    limit = 100 # can be up to 200
+    limit = 100 
 
     while True:
         try:
@@ -51,20 +53,55 @@ def get_all_deals():
 # Fetch the data
 deals_data = get_all_deals()
 
-# Process the data (e.g., convert to a pandas DataFrame or CSV)
+deals_details = []
+
+# Collect the data 
 if deals_data:
     deals_list = list(deals_data) 
+    
+    for dd in deals_list:
+        deals_details.append({
+            "archived": dd.archived,
+            "archived_at": dd.archived_at,
+            "associations": dd.associations,
+            "created_at": dd.created_at,
+            "id":dd.id,
+            "object_write_trace_id": dd.object_write_trace_id,
+            "properties": dd.properties,
+            "properties_with_history": dd.properties_with_history,
+            "updated_at": dd.updated_at            
+            }) 
 
-    # Create a Pandas DataFrame for easy analysis/export
-    df = pd.DataFrame(deals_list)
+        data_to_save = {
+            "archived": dd.archived,
+            "archived_at": dd.archived_at,
+            "associations": dd.associations,
+            # "created_at": datetime.date(dd.created_at),
+            "id": dd.id,
+            "object_write_trace_id": dd.object_write_trace_id,
+            "properties": dd.properties,
+            "properties_with_history": dd.properties_with_history,
+            # "updated_at": datetime.date(dd.updated_at)
+            }    
+
+    # Create a Pandas DataFrame for easy analysis
+    df = pd.DataFrame(deals_details)
+    filename = "output"
     
     print(f"Successfully extracted {len(deals_data)} deals.")
     print(df.head())
 
-    # Save to a CSV file
-    df.to_csv("hubspot_deals.csv", index=False)
-    print("Data saved to hubspot_deals.csv")
+    # Save to the files
+    df.to_csv("df" + filename + ".csv", index=False)
+
+    try:
+        with open("json" + filename + ".json", 'w') as json_file:
+            json.dump(data_to_save, json_file, indent=4)
+        print(f"Data successfully saved to JSON file.")
+    except IOError as e:
+        print(f"Error saving file: {e}")
+
+    print("Data is successfully saved on your local machine.")
 
 else:
     print("No deals data extracted.")
-
