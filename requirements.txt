@@ -4,3 +4,4 @@ python==3.11.9
 node.js
 pandas
 sqlalchemy
+pyodbc
