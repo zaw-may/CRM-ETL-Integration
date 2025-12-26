@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 # Private App or OAuth Token (From App Distribution)
-ACCESS_TOKEN = "pat-na2-xxxxxxx"  
+ACCESS_TOKEN = "pat-na2-xxxxx"  
 
 # Initialize the HubSpot client 
 try:
@@ -82,17 +82,18 @@ if deals_data:
             "properties": dd.properties,
             "properties_with_history": dd.properties_with_history,
             # "updated_at": datetime.date(dd.updated_at)
-            }    
+            }      
 
     # Create a Pandas DataFrame for easy analysis
     df = pd.DataFrame(deals_details)
+    flatten_df = pd.json_normalize(deals_details)
     filename = "output"
     
     print(f"Successfully extracted {len(deals_data)} deals.")
     print(df.head())
 
     # Save to the files
-    df.to_csv("df" + filename + ".csv", index=False)
+    flatten_df.to_csv("df" + filename + ".csv", index=False)
 
     try:
         with open("json" + filename + ".json", 'w') as json_file:
