@@ -1,18 +1,18 @@
 """
 Steps:
+0. Configure & connect DB
 1. Load HubSpot records
 2. Normalize & clean data
 3. Load into staging table
 4. MERGE into final table
 """
 
-import json
 import pandas as pd
-from sqlalchemy import Table, MetaData, Column, create_engine, insert, text, DateTime, Float, String, Integer
-from pathlib import Path
+from sqlalchemy import create_engine, text, DateTime, Float, String, Integer
 import logging
 from hubspot import HubSpot
 from hubspot.crm.deals import ApiException
+from hubspot.crm.pipelines import ApiException
 import urllib
 from sqlalchemy.pool import StaticPool
 import warnings
@@ -23,18 +23,18 @@ warnings.filterwarnings("ignore")
 
 # CONFIGURATION
 
-SQL_SERVER = "SERVER\INSTANCE" 
-DATABASE = "mydb" 
-USERNAME = "uid" 
-PASSWORD = "pwd"
+SQL_SERVER = "SERVER-NAME\INSTANCE-NAME" 
+DATABASE = "DATABASE-NAME" 
+USERNAME = "UNAME" 
+PASSWORD = "PWD" 
 DRIVER = "ODBC Driver 17 for SQL Server"
 
 # Private App or OAuth Token (From App Distribution)
 
-ACCESS_TOKEN = "pat-na2-xxxxxxx"  
+ACCESS_TOKEN = "pat-na2-xxxx"  
 
 STAGING_TABLE = "stg_hubspot_deals"
-FINAL_TABLE = "hubspot_deals"
+FINAL_TABLE = "final_hubspot_deals"
 
 try:
     client = HubSpot(access_token=ACCESS_TOKEN)
@@ -73,8 +73,8 @@ def get_engine():
 
 # LOAD JSON
 
-def load_hubspot_json() -> pd.DataFrame:
-    logging.info("Loading HubSpot JSON")
+def load_deals_json() -> pd.DataFrame:
+    logging.info("Loading HubSpot Deals JSON")
     def get_all_deals():
         """
         Fetches all deals from HubSpot using the API client, handling pagination.
@@ -90,7 +90,14 @@ def load_hubspot_json() -> pd.DataFrame:
                     limit=limit,
                     after=after,
                     archived=False,
-                    properties=["dealname", "amount", "dealstage", "closedate", "pipeline", "description", "dealtype", "createdate", "days_to_close"]
+                    properties=["amount", "capacity_in_kwp", "closed_lost_reason__dropdown_", "date_entered_stage___advanced_development", "date_entered_stage___closed_lost",
+                            "date_entered_stage___early_development", "date_entered_stage___potential_prospect", "date_entered_stage___project_approved", 
+                            "date_exited_advanced_development", "date_exited_early_development", "date_exited_potential_prospect", "date_exited_project_approved",
+                            "dealname", "dealstage", "dealtype", "final_capacity_in_kw", "hs_closed_amount", "hs_deal_stage_probability", "hs_forecast_amount", 
+                            "hs_num_associated_deal_registrations", "hs_num_associated_deal_splits", "pipeline", "ppa_capacity", "project_code", "project_country",
+                            "type_of_project_surface_type__", "hs_lastmodifieddate", 
+                            "business_unit", "capacity_in_mwp", "days_to_close", "hs_is_closed", "project_province", "hs_projected_amount"
+                    ]
                 )
             
                 all_deals.extend(api_response.results)
@@ -134,9 +141,59 @@ def load_hubspot_json() -> pd.DataFrame:
     # Create a Pandas DataFrame for easy analysis
     df = pd.DataFrame(deals_details)
     flatten_df = pd.json_normalize(deals_details)
-    logging.info(f"Loaded {len(df)} records")
+    logging.info(f"Loaded {len(df)} deals records")
 
     return flatten_df
+
+def load_hubspot_deal_pipelines() -> pd.DataFrame:
+    """
+    Load HubSpot Deal Pipelines and Stages.
+    """
+
+    logging.info("Loading HubSpot Deals Pipeline JSON")
+
+    try:
+        api_response = client.crm.pipelines.pipelines_api.get_all(
+            object_type="deals"
+        )
+    except ApiException as e:
+        print(f"HubSpot Pipeline API error: {e}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Unexpected error while loading pipelines: {e}")
+        return pd.DataFrame()
+
+    rows = []
+
+    if not api_response or not api_response.results:
+        print("No pipelines returned from HubSpot")
+        return pd.DataFrame()
+
+    for pipeline in api_response.results:
+        pipeline_id = pipeline.id
+        pipeline_name = pipeline.label
+
+        # Safety check
+        if not pipeline.stages:
+            logging.info(f"Pipeline {pipeline_id} has no stages")
+            continue
+
+        for stage in pipeline.stages:
+            rows.append({
+                "pipeline_id": pipeline_id,
+                "pipeline_name": pipeline_name,
+                "stage_id": stage.id,
+                "stage_name": stage.label,
+                "stage_order": stage.display_order
+                # "stage_probability": stage.metadata.get("probability"),
+                # "is_closed_won": stage.metadata.get("isClosedWon"),
+                # "is_closed_lost": stage.metadata.get("isClosedLost")
+            })
+
+    df = pd.DataFrame(rows)
+    logging.info(f"Loaded {len(df)} pipeline-stage records")
+
+    return df
 
 # CLEAN DATA
 
@@ -147,9 +204,15 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     required_columns = [
         "archived", "archived_at", "associations", "created_at", 
         "id", "object_write_trace_id", "properties_with_history", "updated_at",
-        "properties.amount", "properties.closedate", "properties.createdate", "properties.days_to_close", 
-        "properties.dealname", "properties.dealstage", "properties.dealtype", "properties.description", 
-        "properties.hs_lastmodifieddate", "properties.hs_object_id", "properties.pipeline"
+        "properties.amount", "properties.capacity_in_kwp", "properties.closed_lost_reason__dropdown_", "properties.date_entered_stage___advanced_development",
+        "properties.date_entered_stage___closed_lost", "properties.date_entered_stage___early_development", "properties.date_entered_stage___potential_prospect", 
+        "properties.date_entered_stage___project_approved", "properties.date_exited_advanced_development", "properties.date_exited_early_development",
+        "properties.date_exited_potential_prospect", "properties.date_exited_project_approved", "properties.dealname", "properties.dealstage", "properties.dealtype",
+        "properties.final_capacity_in_kw", "properties.hs_closed_amount", "properties.hs_deal_stage_probability", "properties.hs_forecast_amount", 
+        "properties.hs_num_associated_deal_registrations", "properties.hs_num_associated_deal_splits", "properties.pipeline", "properties.ppa_capacity", 
+        "properties.project_code", "properties.project_country", "properties.type_of_project_surface_type__", "properties.hs_lastmodifieddate",
+        "properties.business_unit", "properties.capacity_in_mwp", "properties.days_to_close", "properties.hs_is_closed", 
+        "properties.project_province", "properties.hs_projected_amount", "pipeline_name", "stage_name", "stage_order"
     ]
 
     for col in required_columns:
@@ -158,8 +221,27 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     # Type conversions
     df["properties.amount"] = pd.to_numeric(df["properties.amount"], errors="coerce")
-    df["properties.createdate"] = pd.to_datetime(df["properties.createdate"], errors="coerce")
-    df["properties.closedate"] = pd.to_datetime(df["properties.closedate"], errors="coerce")
+    df["properties.capacity_in_kwp"] = pd.to_numeric(df["properties.capacity_in_kwp"], errors="coerce")
+    df["properties.final_capacity_in_kw"] = pd.to_numeric(df["properties.final_capacity_in_kw"], errors="coerce")
+    df["properties.hs_closed_amount"] = pd.to_numeric(df["properties.hs_closed_amount"], errors="coerce")
+    df["properties.hs_deal_stage_probability"] = pd.to_numeric(df["properties.hs_deal_stage_probability"], errors="coerce")
+    df["properties.hs_forecast_amount"] = pd.to_numeric(df["properties.hs_forecast_amount"], errors="coerce")
+    df["properties.hs_num_associated_deal_registrations"] = pd.to_numeric(df["properties.hs_num_associated_deal_registrations"], errors="coerce")
+    df["properties.hs_num_associated_deal_splits"] = pd.to_numeric(df["properties.hs_num_associated_deal_splits"], errors="coerce")
+    df["properties.ppa_capacity"] = pd.to_numeric(df["properties.ppa_capacity"], errors="coerce")
+    df["properties.capacity_in_mwp"] = pd.to_numeric(df["properties.capacity_in_mwp"], errors="coerce")
+    df["properties.days_to_close"] = pd.to_numeric(df["properties.days_to_close"], errors="coerce")
+    df["properties.hs_projected_amount"] = pd.to_numeric(df["properties.hs_projected_amount"], errors="coerce")
+    df["stage_order"] = pd.to_numeric(df["stage_order"], errors="coerce")
+    df["properties.date_entered_stage___advanced_development"] = pd.to_datetime(df["properties.date_entered_stage___advanced_development"], errors="coerce")
+    df["properties.date_entered_stage___closed_lost"] = pd.to_datetime(df["properties.date_entered_stage___closed_lost"], errors="coerce")
+    df["properties.date_entered_stage___early_development"] = pd.to_datetime(df["properties.date_entered_stage___early_development"], errors="coerce")
+    df["properties.date_entered_stage___potential_prospect"] = pd.to_datetime(df["properties.date_entered_stage___potential_prospect"], errors="coerce")
+    df["properties.date_entered_stage___project_approved"] = pd.to_datetime(df["properties.date_entered_stage___project_approved"], errors="coerce")
+    df["properties.date_exited_advanced_development"] = pd.to_datetime(df["properties.date_exited_advanced_development"], errors="coerce")
+    df["properties.date_exited_early_development"] = pd.to_datetime(df["properties.date_exited_early_development"], errors="coerce")
+    df["properties.date_exited_potential_prospect"] = pd.to_datetime(df["properties.date_exited_potential_prospect"], errors="coerce")
+    df["properties.date_exited_project_approved"] = pd.to_datetime(df["properties.date_exited_project_approved"], errors="coerce")
     df["properties.hs_lastmodifieddate"] = pd.to_datetime(df["properties.hs_lastmodifieddate"], errors="coerce")
     df["archived_at"] = pd.to_datetime(df["archived_at"], errors="coerce")
     df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
@@ -180,16 +262,41 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         "properties_with_history": "string",
         "updated_at": "datetime64[ns]",
         "properties.amount": "float",
-        "properties.closedate": "datetime64[ns]",
-        "properties.createdate": "datetime64[ns]",
-        "properties.days_to_close": "string",
+        "properties.capacity_in_kwp": "float",
+        "properties.closed_lost_reason__dropdown_": "string",
+        "properties.date_entered_stage___advanced_development": "datetime64[ns]",
+        "properties.date_entered_stage___closed_lost": "datetime64[ns]",
+        "properties.date_entered_stage___early_development": "datetime64[ns]",
+        "properties.date_entered_stage___potential_prospect": "datetime64[ns]",
+        "properties.date_entered_stage___project_approved": "datetime64[ns]",
+        "properties.date_exited_advanced_development": "datetime64[ns]",
+        "properties.date_exited_early_development": "datetime64[ns]",
+        "properties.date_exited_potential_prospect": "datetime64[ns]",
+        "properties.date_exited_project_approved": "datetime64[ns]",
         "properties.dealname": "string",
         "properties.dealstage": "string",
         "properties.dealtype": "string",
-        "properties.description": "string",
+        "properties.final_capacity_in_kw": "float",
+        "properties.hs_closed_amount": "float",
+        "properties.hs_deal_stage_probability": "float",
+        "properties.hs_forecast_amount": "float",
+        "properties.hs_num_associated_deal_registrations": "int64",
+        "properties.hs_num_associated_deal_splits": "int64",
+        "properties.pipeline": "string",
+        "properties.ppa_capacity": "float",
+        "properties.project_code": "string",
+        "properties.project_country": "string",
+        "properties.type_of_project_surface_type__": "string",
         "properties.hs_lastmodifieddate": "datetime64[ns]",
-        "properties.hs_object_id": "string",
-        "properties.pipeline": "string"
+        "properties.business_unit": "string",
+        "properties.capacity_in_mwp": "float",
+        "properties.days_to_close": "int64",
+        "properties.hs_is_closed": "string", 
+        "properties.project_province": "string",
+        "properties.hs_projected_amount": "float",
+        "pipeline_name": "string",
+        "stage_name": "string",
+        "stage_order": "int64"
     }
 
     for col, dtype in schema.items():
@@ -206,10 +313,18 @@ def load_to_staging(df: pd.DataFrame, engine):
 
     # Type mapping
     dtype_map = {
-        "created_at": DateTime(),
+        "archived_at": DateTime(),
+        "created_at": DateTime(), 
         "updated_at": DateTime(),
-        "properties.closedate": DateTime(),
-        "properties.createdate": DateTime(),
+        "properties.date_entered_stage___advanced_development": DateTime(),
+        "properties.date_entered_stage___closed_lost": DateTime(),
+        "properties.date_entered_stage___early_development": DateTime(),
+        "properties.date_entered_stage___potential_prospect": DateTime(),
+        "properties.date_entered_stage___project_approved": DateTime(),
+        "properties.date_exited_advanced_development": DateTime(),
+        "properties.date_exited_early_development": DateTime(),
+        "properties.date_exited_potential_prospect": DateTime(),
+        "properties.date_exited_project_approved": DateTime(),
         "properties.hs_lastmodifieddate": DateTime(),
     }
     df.to_sql(
@@ -236,9 +351,10 @@ def merge_to_final(engine):
     merge_sql = f"""
         MERGE dbo.{FINAL_TABLE} WITH (HOLDLOCK) AS tgt
         USING (
-            SELECT * FROM (
+            SELECT * FROM 
+                (
                     SELECT *,ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC
-               ) AS rn
+                ) AS rn
         FROM dbo.{STAGING_TABLE}
         ) s
         WHERE rn = 1
@@ -252,33 +368,139 @@ def merge_to_final(engine):
                 tgt.associations = src.associations,
                 tgt.properties_with_history = src.properties_with_history,
                 tgt.updated_at = src.updated_at,
-                tgt.[properties.amount] = src.[properties.amount],
-                tgt.[properties.closedate] = src.[properties.closedate],
-                tgt.[properties.days_to_close] = src.[properties.days_to_close],
-                tgt.[properties.dealname] = src.[properties.dealname],
-                tgt.[properties.dealstage] = src.[properties.dealstage],
-                tgt.[properties.dealtype] = src.[properties.dealtype],
-                tgt.[properties.description] = src.[properties.description],
-                tgt.[properties.hs_lastmodifieddate] = src.[properties.hs_lastmodifieddate],
-                tgt.[properties.pipeline] = src.[properties.pipeline]
+
+                tgt.[amount] = src.[properties.amount],
+                tgt.[capacity_in_kwp] = src.[properties.capacity_in_kwp],
+                tgt.[closed_lost_reason] = src.[properties.closed_lost_reason__dropdown_],
+                tgt.[date_entered_stage_advanced_development] = src.[properties.date_entered_stage___advanced_development],
+                tgt.[date_entered_stage_closed_lost] = src.[properties.date_entered_stage___closed_lost],
+                tgt.[date_entered_stage_early_development] = src.[properties.date_entered_stage___early_development],
+                tgt.[date_entered_stage_potential_prospect] = src.[properties.date_entered_stage___potential_prospect],
+                tgt.[date_entered_stage_project_approved] = src.[properties.date_entered_stage___project_approved],
+                tgt.[date_exited_advanced_development] = src.[properties.date_exited_advanced_development],
+                tgt.[date_exited_early_development] = src.[properties.date_exited_early_development],
+                tgt.[date_exited_potential_prospect] = src.[properties.date_exited_potential_prospect],
+                tgt.[date_exited_project_approved] = src.[properties.date_exited_project_approved],
+                tgt.[dealname] = src.[properties.dealname],
+                tgt.[dealstage] = src.[properties.dealstage],
+                tgt.[dealtype] = src.[properties.dealtype],
+                tgt.[final_capacity_in_kw] = src.[properties.final_capacity_in_kw],
+                tgt.[hs_closed_amount] = src.[properties.hs_closed_amount],
+                tgt.[hs_deal_stage_probability] = src.[properties.hs_deal_stage_probability],
+                tgt.[hs_forecast_amount] = src.[properties.hs_forecast_amount],
+                tgt.[hs_num_associated_deal_registrations] = src.[properties.hs_num_associated_deal_registrations],
+                tgt.[hs_num_associated_deal_splits] = src.[properties.hs_num_associated_deal_splits],
+                tgt.[pipeline] = src.[properties.pipeline],
+                tgt.[ppa_capacity] = src.[properties.ppa_capacity],
+                tgt.[project_code] = src.[properties.project_code],
+                tgt.[project_country] = src.[properties.project_country],
+                tgt.[type_of_project_surface_type] = src.[properties.type_of_project_surface_type__],
+                tgt.[hs_lastmodifieddate] = src.[properties.hs_lastmodifieddate],
+                tgt.[business_unit] = src.[properties.business_unit],
+                tgt.[capacity_in_mwp] = src.[properties.capacity_in_mwp],
+                tgt.[days_to_close] = src.[properties.days_to_close],
+                tgt.[hs_is_closed] = src.[properties.hs_is_closed],
+                tgt.[project_province] = src.[properties.project_province],
+                tgt.[hs_projected_amount] = src.[properties.hs_projected_amount],
+                tgt.[pipeline_name] = src.[pipeline_name], 
+                tgt.[stage_name] = src.[stage_name],
+                tgt.[stage_order] = src.[stage_order]
 
         WHEN NOT MATCHED
         AND TRY_CAST(src.id AS BIGINT) IS NOT NULL THEN
-            INSERT (archived, archived_at, associations, created_at, 
-            id, object_write_trace_id, properties_with_history, updated_at,
-            [properties.amount], [properties.closedate], [properties.createdate], [properties.days_to_close], 
-            [properties.dealname], [properties.dealstage], [properties.dealtype], [properties.description], 
-            [properties.hs_lastmodifieddate], [properties.hs_object_id], [properties.pipeline])
-            VALUES (src.archived, src.archived_at, src.associations, src.created_at,
-            TRY_CAST(src.id AS BIGINT), src.object_write_trace_id, 
-            src.properties_with_history, src.updated_at,
-            src.[properties.amount], src.[properties.closedate], 
-            src.[properties.createdate], src.[properties.days_to_close], src.[properties.dealname], 
-            src.[properties.dealstage], src.[properties.dealtype], src.[properties.description], 
-            src.[properties.hs_lastmodifieddate], src.[properties.hs_object_id], src.[properties.pipeline]
+            INSERT (
+                archived,
+                archived_at,
+                associations,
+                created_at,
+                id,
+                object_write_trace_id,
+                properties_with_history,
+                updated_at,
+                [amount],
+                [capacity_in_kwp],
+                [closed_lost_reason],
+                [date_entered_stage_advanced_development],
+                [date_entered_stage_closed_lost],
+                [date_entered_stage_early_development],
+                [date_entered_stage_potential_prospect],
+                [date_entered_stage_project_approved],
+                [date_exited_advanced_development],
+                [date_exited_early_development],
+                [date_exited_potential_prospect],
+                [date_exited_project_approved],
+                [dealname],
+                [dealstage],
+                [dealtype],
+                [final_capacity_in_kw],
+                [hs_closed_amount],
+                [hs_deal_stage_probability],
+                [hs_forecast_amount],
+                [hs_num_associated_deal_registrations],
+                [hs_num_associated_deal_splits],
+                [pipeline],
+                [ppa_capacity],
+                [project_code],
+                [project_country],
+                [type_of_project_surface_type],
+                [hs_lastmodifieddate],
+                [business_unit],
+                [capacity_in_mwp],
+                [days_to_close],
+                [hs_is_closed],
+                [project_province],
+                [hs_projected_amount],
+                [pipeline_name], 
+                [stage_name],
+                [stage_order]
+            )
+            VALUES (
+                src.archived,
+                src.archived_at,
+                src.associations,
+                src.created_at,
+                TRY_CAST(src.id AS BIGINT),
+                src.object_write_trace_id,
+                src.properties_with_history,
+                src.updated_at,
+                src.[properties.amount],
+                src.[properties.capacity_in_kwp],
+                src.[properties.closed_lost_reason__dropdown_],
+                src.[properties.date_entered_stage___advanced_development],
+                src.[properties.date_entered_stage___closed_lost],
+                src.[properties.date_entered_stage___early_development],
+                src.[properties.date_entered_stage___potential_prospect],
+                src.[properties.date_entered_stage___project_approved],
+                src.[properties.date_exited_advanced_development],
+                src.[properties.date_exited_early_development],
+                src.[properties.date_exited_potential_prospect],
+                src.[properties.date_exited_project_approved],
+                src.[properties.dealname],
+                src.[properties.dealstage],
+                src.[properties.dealtype],
+                src.[properties.final_capacity_in_kw],
+                src.[properties.hs_closed_amount],
+                src.[properties.hs_deal_stage_probability],
+                src.[properties.hs_forecast_amount],
+                src.[properties.hs_num_associated_deal_registrations],
+                src.[properties.hs_num_associated_deal_splits],
+                src.[properties.pipeline],
+                src.[properties.ppa_capacity],
+                src.[properties.project_code],
+                src.[properties.project_country],
+                src.[properties.type_of_project_surface_type__],
+                src.[properties.hs_lastmodifieddate],
+                src.[properties.business_unit],
+                src.[properties.capacity_in_mwp],
+                src.[properties.days_to_close],
+                src.[properties.hs_is_closed],
+                src.[properties.project_province],
+                src.[properties.hs_projected_amount],
+                src.[pipeline_name], 
+                src.[stage_name],
+                src.[stage_order]
             );
      """
-
 
     with engine.begin() as conn:
         conn.execute(text(merge_sql))
@@ -292,12 +514,23 @@ def main():
 
     engine = get_engine()
 
-    df = load_hubspot_json()
-    df = clean_dataframe(df)
-    df = normalize_dataframe(df)
-    df = (df.sort_values("updated_at").drop_duplicates("id", keep="last"))
+    df = load_deals_json()
+    df_pipelines = load_hubspot_deal_pipelines()
 
-    load_to_staging(df, engine)
+    df_final = ( df.merge (
+            df_pipelines,
+            left_on=["properties.pipeline", "properties.dealstage"],
+            right_on=["pipeline_id", "stage_id"],
+            how="left"
+            )
+            .drop(columns=["pipeline_id", "stage_id"])
+        )
+
+    df_final = clean_dataframe(df_final)
+    df_final = normalize_dataframe(df_final)
+    df_final = (df_final.sort_values("updated_at").drop_duplicates("id", keep="last"))
+
+    load_to_staging(df_final, engine)
     merge_to_final(engine)
 
     logging.info("ETL completed successfully")
