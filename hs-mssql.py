@@ -16,6 +16,9 @@ from hubspot.crm.pipelines import ApiException
 import urllib
 from sqlalchemy.pool import StaticPool
 import warnings
+import os
+from dotenv import load_dotenv
+
 
 # WARNING [Optional]
 
@@ -23,15 +26,17 @@ warnings.filterwarnings("ignore")
 
 # CONFIGURATION
 
-SQL_SERVER = "SERVER-NAME\INSTANCE-NAME" 
-DATABASE = "DATABASE-NAME" 
-USERNAME = "UNAME" 
-PASSWORD = "PWD" 
-DRIVER = "ODBC Driver 17 for SQL Server"
+load_dotenv()
+
+SQL_SERVER = os.getenv("SQL_SERVER")
+DATABASE = os.getenv("DATABASE")
+USERNAME = os.getenv("USERNAME")
+PASSWORD = os.getenv("PASSWORD")
+DRIVER = os.getenv("DRIVER")
 
 # Private App or OAuth Token (From App Distribution)
 
-ACCESS_TOKEN = "pat-na2-xxxx"  
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 
 STAGING_TABLE = "stg_hubspot_deals"
 FINAL_TABLE = "final_hubspot_deals"
@@ -90,9 +95,13 @@ def load_deals_json() -> pd.DataFrame:
                     limit=limit,
                     after=after,
                     archived=False,
-                    properties=["amount", "capacity_in_kwp", "closed_lost_reason__dropdown_", "date_entered_stage___advanced_development", "date_entered_stage___closed_lost",
-                            "date_entered_stage___early_development", "date_entered_stage___potential_prospect", "date_entered_stage___project_approved", 
-                            "date_exited_advanced_development", "date_exited_early_development", "date_exited_potential_prospect", "date_exited_project_approved",
+                    properties=["amount", "capacity_in_kwp", "closed_lost_reason__dropdown_", "date_entered_stage___advanced_development", "date_entered_stage___closed_lost", "date_entered_closing_advanced",
+                            "date_entered_stage___early_development", "date_entered_stage___potential_prospect", "date_entered_stage___project_approved", "date_entered_stage___mid_development",
+                            "date_entered_grid_checking_dpt", "date_entered_stage___operating", "date_entered_stage___ppa_1st_mark_up", "date_entered_preliminary_assessment", "date_entered_stage___ready_to_build", 
+                            "date_entered_stage___testing", "date_entered_stage___under_construction",
+                            "date_exited_advanced_development", "date_exited_early_development", "date_exited_potential_prospect", "date_exited_project_approved", "date_exited_mid_development", 
+                            "date_exited_grid_checking_dpt", "date_exited_operating", "date_exited_ppa_1st_mark_up", "date_exited_preliminary_assessment", "date_exited_ready_to_build", "date_exited_testing",
+                            "date_exited_under_construction",
                             "dealname", "dealstage", "dealtype", "final_capacity_in_kw", "hs_closed_amount", "hs_deal_stage_probability", "hs_forecast_amount", 
                             "hs_num_associated_deal_registrations", "hs_num_associated_deal_splits", "pipeline", "ppa_capacity", "project_code", "project_country",
                             "type_of_project_surface_type__", "hs_lastmodifieddate", 
@@ -205,9 +214,17 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         "archived", "archived_at", "associations", "created_at", 
         "id", "object_write_trace_id", "properties_with_history", "updated_at",
         "properties.amount", "properties.capacity_in_kwp", "properties.closed_lost_reason__dropdown_", "properties.date_entered_stage___advanced_development",
-        "properties.date_entered_stage___closed_lost", "properties.date_entered_stage___early_development", "properties.date_entered_stage___potential_prospect", 
-        "properties.date_entered_stage___project_approved", "properties.date_exited_advanced_development", "properties.date_exited_early_development",
-        "properties.date_exited_potential_prospect", "properties.date_exited_project_approved", "properties.dealname", "properties.dealstage", "properties.dealtype",
+        "properties.date_entered_stage___closed_lost", "properties.date_entered_closing_advanced", 
+        "properties.date_entered_stage___early_development", "properties.date_entered_stage___potential_prospect", 
+        "properties.date_entered_stage___project_approved", "properties.date_entered_stage___mid_development",
+        "properties.date_entered_grid_checking_dpt", "properties.date_entered_stage___operating", "properties.date_entered_stage___ppa_1st_mark_up", 
+        "properties.date_entered_preliminary_assessment", "properties.date_entered_stage___ready_to_build", 
+        "properties.date_entered_stage___testing", "properties.date_entered_stage___under_construction",
+        "properties.date_exited_advanced_development", "properties.date_exited_early_development",
+        "properties.date_exited_potential_prospect", "properties.date_exited_project_approved", "properties.date_exited_mid_development", 
+        "properties.date_exited_grid_checking_dpt", "properties.date_exited_operating", "properties.date_exited_ppa_1st_mark_up", "properties.date_exited_preliminary_assessment", 
+        "properties.date_exited_ready_to_build", "date_exited_testing", "properties.date_exited_under_construction",                     
+        "properties.dealname", "properties.dealstage", "properties.dealtype",
         "properties.final_capacity_in_kw", "properties.hs_closed_amount", "properties.hs_deal_stage_probability", "properties.hs_forecast_amount", 
         "properties.hs_num_associated_deal_registrations", "properties.hs_num_associated_deal_splits", "properties.pipeline", "properties.ppa_capacity", 
         "properties.project_code", "properties.project_country", "properties.type_of_project_surface_type__", "properties.hs_lastmodifieddate",
@@ -235,13 +252,30 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df["stage_order"] = pd.to_numeric(df["stage_order"], errors="coerce")
     df["properties.date_entered_stage___advanced_development"] = pd.to_datetime(df["properties.date_entered_stage___advanced_development"], errors="coerce")
     df["properties.date_entered_stage___closed_lost"] = pd.to_datetime(df["properties.date_entered_stage___closed_lost"], errors="coerce")
+    df["properties.date_entered_closing_advanced"] = pd.to_datetime(df["properties.date_entered_closing_advanced"], errors="coerce")  
     df["properties.date_entered_stage___early_development"] = pd.to_datetime(df["properties.date_entered_stage___early_development"], errors="coerce")
     df["properties.date_entered_stage___potential_prospect"] = pd.to_datetime(df["properties.date_entered_stage___potential_prospect"], errors="coerce")
     df["properties.date_entered_stage___project_approved"] = pd.to_datetime(df["properties.date_entered_stage___project_approved"], errors="coerce")
+    df["properties.date_entered_stage___mid_development"] = pd.to_datetime(df["properties.date_entered_stage___mid_development"], errors="coerce")
+    df["properties.date_entered_grid_checking_dpt"] = pd.to_datetime(df["properties.date_entered_grid_checking_dpt"], errors="coerce")
+    df["properties.date_entered_stage___operating"] = pd.to_datetime(df["properties.date_entered_stage___operating"], errors="coerce")
+    df["properties.date_entered_stage___ppa_1st_mark_up"] = pd.to_datetime(df["properties.date_entered_stage___ppa_1st_mark_up"], errors="coerce")
+    df["properties.date_entered_preliminary_assessment"] = pd.to_datetime(df["properties.date_entered_preliminary_assessment"], errors="coerce")
+    df["properties.date_entered_stage___ready_to_build"] = pd.to_datetime(df["properties.date_entered_stage___ready_to_build"], errors="coerce")
+    df["properties.date_entered_stage___testing"] = pd.to_datetime(df["properties.date_entered_stage___testing"], errors="coerce")
+    df["properties.date_entered_stage___under_construction"] = pd.to_datetime(df["properties.date_entered_stage___under_construction"], errors="coerce")
     df["properties.date_exited_advanced_development"] = pd.to_datetime(df["properties.date_exited_advanced_development"], errors="coerce")
     df["properties.date_exited_early_development"] = pd.to_datetime(df["properties.date_exited_early_development"], errors="coerce")
     df["properties.date_exited_potential_prospect"] = pd.to_datetime(df["properties.date_exited_potential_prospect"], errors="coerce")
     df["properties.date_exited_project_approved"] = pd.to_datetime(df["properties.date_exited_project_approved"], errors="coerce")
+    df["properties.date_exited_mid_development"] = pd.to_datetime(df["properties.date_exited_mid_development"], errors="coerce")
+    df["properties.date_exited_grid_checking_dpt"] = pd.to_datetime(df["properties.date_exited_grid_checking_dpt"], errors="coerce")
+    df["properties.date_exited_operating"] = pd.to_datetime(df["properties.date_exited_operating"], errors="coerce")
+    df["properties.date_exited_ppa_1st_mark_up"] = pd.to_datetime(df["properties.date_exited_mid_development"], errors="coerce")
+    df["properties.date_exited_preliminary_assessment"] = pd.to_datetime(df["properties.date_exited_preliminary_assessment"], errors="coerce")
+    df["properties.date_exited_ready_to_build"] = pd.to_datetime(df["properties.date_exited_ready_to_build"], errors="coerce")
+    df["properties.date_exited_testing"] = pd.to_datetime(df["properties.date_exited_testing"], errors="coerce")
+    df["properties.date_exited_under_construction"] = pd.to_datetime(df["properties.date_exited_under_construction"], errors="coerce")
     df["properties.hs_lastmodifieddate"] = pd.to_datetime(df["properties.hs_lastmodifieddate"], errors="coerce")
     df["archived_at"] = pd.to_datetime(df["archived_at"], errors="coerce")
     df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
@@ -266,13 +300,30 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         "properties.closed_lost_reason__dropdown_": "string",
         "properties.date_entered_stage___advanced_development": "datetime64[ns]",
         "properties.date_entered_stage___closed_lost": "datetime64[ns]",
+        "properties.date_entered_closing_advanced": "datetime64[ns]",
         "properties.date_entered_stage___early_development": "datetime64[ns]",
         "properties.date_entered_stage___potential_prospect": "datetime64[ns]",
         "properties.date_entered_stage___project_approved": "datetime64[ns]",
+        "properties.date_entered_stage___mid_development": "datetime64[ns]",
+        "properties.date_entered_grid_checking_dpt": "datetime64[ns]",
+        "properties.date_entered_stage___operating": "datetime64[ns]",
+        "properties.date_entered_stage___ppa_1st_mark_up": "datetime64[ns]",
+        "properties.date_entered_preliminary_assessment": "datetime64[ns]",
+        "properties.date_entered_stage___ready_to_build": "datetime64[ns]",
+        "properties.date_entered_stage___testing": "datetime64[ns]",
+        "properties.date_entered_stage___under_construction": "datetime64[ns]",
         "properties.date_exited_advanced_development": "datetime64[ns]",
         "properties.date_exited_early_development": "datetime64[ns]",
         "properties.date_exited_potential_prospect": "datetime64[ns]",
         "properties.date_exited_project_approved": "datetime64[ns]",
+        "properties.date_exited_mid_development": "datetime64[ns]",
+        "properties.date_exited_grid_checking_dpt": "datetime64[ns]",
+        "properties.date_exited_operating": "datetime64[ns]",
+        "properties.date_exited_ppa_1st_mark_up": "datetime64[ns]",
+        "properties.date_exited_preliminary_assessment": "datetime64[ns]",
+        "properties.date_exited_ready_to_build": "datetime64[ns]",
+        "properties.date_exited_testing": "datetime64[ns]",
+        "properties.date_exited_under_construction": "datetime64[ns]",
         "properties.dealname": "string",
         "properties.dealstage": "string",
         "properties.dealtype": "string",
@@ -318,13 +369,30 @@ def load_to_staging(df: pd.DataFrame, engine):
         "updated_at": DateTime(),
         "properties.date_entered_stage___advanced_development": DateTime(),
         "properties.date_entered_stage___closed_lost": DateTime(),
+        "properties.date_entered_closing_advanced": DateTime(),
         "properties.date_entered_stage___early_development": DateTime(),
         "properties.date_entered_stage___potential_prospect": DateTime(),
         "properties.date_entered_stage___project_approved": DateTime(),
+        "properties.date_entered_stage___mid_development": DateTime(),
+        "properties.date_entered_grid_checking_dpt": DateTime(),
+        "properties.date_entered_stage___operating": DateTime(),
+        "properties.date_entered_stage___ppa_1st_mark_up": DateTime(),
+        "properties.date_entered_preliminary_assessment": DateTime(),
+        "properties.date_entered_stage___ready_to_build": DateTime(),
+        "properties.date_entered_stage___testing": DateTime(),
+        "properties.date_entered_stage___under_construction": DateTime(),
         "properties.date_exited_advanced_development": DateTime(),
         "properties.date_exited_early_development": DateTime(),
         "properties.date_exited_potential_prospect": DateTime(),
         "properties.date_exited_project_approved": DateTime(),
+        "properties.date_exited_mid_development": DateTime(),
+        "properties.date_exited_grid_checking_dpt": DateTime(),
+        "properties.date_exited_operating": DateTime(),
+        "properties.date_exited_ppa_1st_mark_up": DateTime(),
+        "properties.date_exited_preliminary_assessment": DateTime(),
+        "properties.date_exited_ready_to_build": DateTime(),
+        "properties.date_exited_testing": DateTime(),
+        "properties.date_exited_under_construction": DateTime(),
         "properties.hs_lastmodifieddate": DateTime(),
     }
     df.to_sql(
@@ -368,19 +436,35 @@ def merge_to_final(engine):
                 tgt.associations = src.associations,
                 tgt.properties_with_history = src.properties_with_history,
                 tgt.updated_at = src.updated_at,
-
                 tgt.[amount] = src.[properties.amount],
                 tgt.[capacity_in_kwp] = src.[properties.capacity_in_kwp],
                 tgt.[closed_lost_reason] = src.[properties.closed_lost_reason__dropdown_],
                 tgt.[date_entered_stage_advanced_development] = src.[properties.date_entered_stage___advanced_development],
                 tgt.[date_entered_stage_closed_lost] = src.[properties.date_entered_stage___closed_lost],
+                tgt.[date_entered_closing_advanced] = src.[properties.date_entered_closing_advanced],
                 tgt.[date_entered_stage_early_development] = src.[properties.date_entered_stage___early_development],
                 tgt.[date_entered_stage_potential_prospect] = src.[properties.date_entered_stage___potential_prospect],
                 tgt.[date_entered_stage_project_approved] = src.[properties.date_entered_stage___project_approved],
+                tgt.[date_entered_stage_mid_development] = src.[properties.date_entered_stage___mid_development],
+                tgt.[date_entered_grid_checking_dpt] = src.[properties.date_entered_grid_checking_dpt],
+                tgt.[date_entered_stage_operating] = src.[properties.date_entered_stage___operating],
+                tgt.[date_entered_stage_ppa_1st_mark_up] = src.[properties.date_entered_stage___ppa_1st_mark_up],
+                tgt.[date_entered_preliminary_assessment] = src.[properties.date_entered_preliminary_assessment],
+                tgt.[date_entered_stage_ready_to_build] = src.[properties.date_entered_stage___ready_to_build],
+                tgt.[date_entered_stage_testing] = src.[properties.date_entered_stage___testing],
+                tgt.[date_entered_stage_under_construction] = src.[properties.date_entered_stage___under_construction],
                 tgt.[date_exited_advanced_development] = src.[properties.date_exited_advanced_development],
                 tgt.[date_exited_early_development] = src.[properties.date_exited_early_development],
                 tgt.[date_exited_potential_prospect] = src.[properties.date_exited_potential_prospect],
                 tgt.[date_exited_project_approved] = src.[properties.date_exited_project_approved],
+                tgt.[date_exited_mid_development] = src.[properties.date_exited_mid_development],
+                tgt.[date_exited_grid_checking_dpt] = src.[properties.date_exited_grid_checking_dpt],
+                tgt.[date_exited_operating] = src.[properties.date_exited_operating],
+                tgt.[date_exited_ppa_1st_mark_up] = src.[properties.date_exited_ppa_1st_mark_up],
+                tgt.[date_exited_preliminary_assessment] = src.[properties.date_exited_preliminary_assessment],
+                tgt.[date_exited_ready_to_build] = src.[properties.date_exited_ready_to_build],
+                tgt.[date_exited_testing] = src.[properties.date_exited_testing],
+                tgt.[date_exited_under_construction] = src.[properties.date_exited_under_construction],
                 tgt.[dealname] = src.[properties.dealname],
                 tgt.[dealstage] = src.[properties.dealstage],
                 tgt.[dealtype] = src.[properties.dealtype],
@@ -422,13 +506,30 @@ def merge_to_final(engine):
                 [closed_lost_reason],
                 [date_entered_stage_advanced_development],
                 [date_entered_stage_closed_lost],
+                [date_entered_closing_advanced],
                 [date_entered_stage_early_development],
                 [date_entered_stage_potential_prospect],
                 [date_entered_stage_project_approved],
+                [date_entered_stage_mid_development],
+                [date_entered_grid_checking_dpt],
+                [date_entered_stage_operating],
+                [date_entered_stage_ppa_1st_mark_up],
+                [date_entered_preliminary_assessment],
+                [date_entered_stage_ready_to_build],
+                [date_entered_stage_testing],
+                [date_entered_stage_under_construction],
                 [date_exited_advanced_development],
                 [date_exited_early_development],
                 [date_exited_potential_prospect],
                 [date_exited_project_approved],
+                [date_exited_mid_development],
+                [date_exited_grid_checking_dpt],
+                [date_exited_operating],
+                [date_exited_ppa_1st_mark_up],
+                [date_exited_preliminary_assessment],
+                [date_exited_ready_to_build],
+                [date_exited_testing],
+                [date_exited_under_construction],
                 [dealname],
                 [dealstage],
                 [dealtype],
@@ -468,13 +569,30 @@ def merge_to_final(engine):
                 src.[properties.closed_lost_reason__dropdown_],
                 src.[properties.date_entered_stage___advanced_development],
                 src.[properties.date_entered_stage___closed_lost],
+                src.[properties.date_entered_closing_advanced],                
                 src.[properties.date_entered_stage___early_development],
                 src.[properties.date_entered_stage___potential_prospect],
                 src.[properties.date_entered_stage___project_approved],
+                src.[properties.date_entered_stage___mid_development],
+                src.[properties.date_entered_grid_checking_dpt],
+                src.[properties.date_entered_stage___operating],
+                src.[properties.date_entered_stage___ppa_1st_mark_up],
+                src.[properties.date_entered_preliminary_assessment],
+                src.[properties.date_entered_stage___ready_to_build],
+                src.[properties.date_entered_stage___testing],
+                src.[properties.date_entered_stage___under_construction],
                 src.[properties.date_exited_advanced_development],
                 src.[properties.date_exited_early_development],
                 src.[properties.date_exited_potential_prospect],
                 src.[properties.date_exited_project_approved],
+                src.[properties.date_exited_mid_development],
+                src.[properties.date_exited_grid_checking_dpt],
+                src.[properties.date_exited_operating],
+                src.[properties.date_exited_ppa_1st_mark_up],
+                src.[properties.date_exited_preliminary_assessment],
+                src.[properties.date_exited_ready_to_build],
+                src.[properties.date_exited_testing],
+                src.[properties.date_exited_under_construction],
                 src.[properties.dealname],
                 src.[properties.dealstage],
                 src.[properties.dealtype],
