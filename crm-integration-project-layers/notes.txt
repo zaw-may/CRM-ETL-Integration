@@ -6,3 +6,4 @@ Steps:
 3. Load into staging table
 4. MERGE into final table
 """
+*** REMARK: The .env file is required in this project folder. ***
