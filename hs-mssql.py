@@ -17,6 +17,7 @@ import urllib
 from sqlalchemy.pool import StaticPool
 import warnings
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 
@@ -26,16 +27,19 @@ warnings.filterwarnings("ignore")
 
 # CONFIGURATION
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+ENV_PATH = BASE_DIR / ".env"
+
+if not ENV_PATH.exists():
+    raise FileNotFoundError(f".env file not found at {ENV_PATH}")
+
+load_dotenv(ENV_PATH)
 
 SQL_SERVER = os.getenv("SQL_SERVER")
 DATABASE = os.getenv("DATABASE")
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
+SQL_USER = os.getenv("SQL_USER")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD")
 DRIVER = os.getenv("DRIVER")
-
-# Private App or OAuth Token (From App Distribution)
-
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 
 STAGING_TABLE = "stg_hubspot_deals"
@@ -61,8 +65,8 @@ def get_engine():
         f"DRIVER={{{DRIVER}}};"
         f"SERVER={SQL_SERVER};"
         f"DATABASE={DATABASE};"
-        f"UID={USERNAME};"
-        f"PWD={PASSWORD};"
+        f"UID={SQL_USER};"
+        f"PWD={SQL_PASSWORD};"
     )
 
     params = urllib.parse.quote_plus(odbc_str)
@@ -98,7 +102,7 @@ def load_deals_json() -> pd.DataFrame:
                     properties=["amount", "capacity_in_kwp", "closed_lost_reason__dropdown_", "date_entered_stage___advanced_development", "date_entered_stage___closed_lost", "date_entered_closing_advanced",
                             "date_entered_stage___early_development", "date_entered_stage___potential_prospect", "date_entered_stage___project_approved", "date_entered_stage___mid_development",
                             "date_entered_grid_checking_dpt", "date_entered_stage___operating", "date_entered_stage___ppa_1st_mark_up", "date_entered_preliminary_assessment", "date_entered_stage___ready_to_build", 
-                            "date_entered_stage___testing", "date_entered_stage___under_construction",
+                            "date_entered_stage___testing", "date_entered_stage___under_construction", "hs_v2_date_entered_current_stage",
                             "date_exited_advanced_development", "date_exited_early_development", "date_exited_potential_prospect", "date_exited_project_approved", "date_exited_mid_development", 
                             "date_exited_grid_checking_dpt", "date_exited_operating", "date_exited_ppa_1st_mark_up", "date_exited_preliminary_assessment", "date_exited_ready_to_build", "date_exited_testing",
                             "date_exited_under_construction",
@@ -219,7 +223,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         "properties.date_entered_stage___project_approved", "properties.date_entered_stage___mid_development",
         "properties.date_entered_grid_checking_dpt", "properties.date_entered_stage___operating", "properties.date_entered_stage___ppa_1st_mark_up", 
         "properties.date_entered_preliminary_assessment", "properties.date_entered_stage___ready_to_build", 
-        "properties.date_entered_stage___testing", "properties.date_entered_stage___under_construction",
+        "properties.date_entered_stage___testing", "properties.date_entered_stage___under_construction", "properties.hs_v2_date_entered_current_stage",
         "properties.date_exited_advanced_development", "properties.date_exited_early_development",
         "properties.date_exited_potential_prospect", "properties.date_exited_project_approved", "properties.date_exited_mid_development", 
         "properties.date_exited_grid_checking_dpt", "properties.date_exited_operating", "properties.date_exited_ppa_1st_mark_up", "properties.date_exited_preliminary_assessment", 
@@ -264,6 +268,7 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df["properties.date_entered_stage___ready_to_build"] = pd.to_datetime(df["properties.date_entered_stage___ready_to_build"], errors="coerce")
     df["properties.date_entered_stage___testing"] = pd.to_datetime(df["properties.date_entered_stage___testing"], errors="coerce")
     df["properties.date_entered_stage___under_construction"] = pd.to_datetime(df["properties.date_entered_stage___under_construction"], errors="coerce")
+    df["properties.hs_v2_date_entered_current_stage"] = pd.to_datetime(df["properties.hs_v2_date_entered_current_stage"], errors="coerce")
     df["properties.date_exited_advanced_development"] = pd.to_datetime(df["properties.date_exited_advanced_development"], errors="coerce")
     df["properties.date_exited_early_development"] = pd.to_datetime(df["properties.date_exited_early_development"], errors="coerce")
     df["properties.date_exited_potential_prospect"] = pd.to_datetime(df["properties.date_exited_potential_prospect"], errors="coerce")
@@ -312,6 +317,7 @@ def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         "properties.date_entered_stage___ready_to_build": "datetime64[ns]",
         "properties.date_entered_stage___testing": "datetime64[ns]",
         "properties.date_entered_stage___under_construction": "datetime64[ns]",
+        "properties.hs_v2_date_entered_current_stage": "datetime64[ns]",
         "properties.date_exited_advanced_development": "datetime64[ns]",
         "properties.date_exited_early_development": "datetime64[ns]",
         "properties.date_exited_potential_prospect": "datetime64[ns]",
@@ -381,6 +387,7 @@ def load_to_staging(df: pd.DataFrame, engine):
         "properties.date_entered_stage___ready_to_build": DateTime(),
         "properties.date_entered_stage___testing": DateTime(),
         "properties.date_entered_stage___under_construction": DateTime(),
+        "properties.hs_v2_date_entered_current_stage": DateTime(),
         "properties.date_exited_advanced_development": DateTime(),
         "properties.date_exited_early_development": DateTime(),
         "properties.date_exited_potential_prospect": DateTime(),
@@ -453,6 +460,7 @@ def merge_to_final(engine):
                 tgt.[date_entered_stage_ready_to_build] = src.[properties.date_entered_stage___ready_to_build],
                 tgt.[date_entered_stage_testing] = src.[properties.date_entered_stage___testing],
                 tgt.[date_entered_stage_under_construction] = src.[properties.date_entered_stage___under_construction],
+                tgt.[hs_v2_date_entered_current_stage] = src.[properties.hs_v2_date_entered_current_stage],
                 tgt.[date_exited_advanced_development] = src.[properties.date_exited_advanced_development],
                 tgt.[date_exited_early_development] = src.[properties.date_exited_early_development],
                 tgt.[date_exited_potential_prospect] = src.[properties.date_exited_potential_prospect],
@@ -518,6 +526,7 @@ def merge_to_final(engine):
                 [date_entered_stage_ready_to_build],
                 [date_entered_stage_testing],
                 [date_entered_stage_under_construction],
+                [hs_v2_date_entered_current_stage],
                 [date_exited_advanced_development],
                 [date_exited_early_development],
                 [date_exited_potential_prospect],
@@ -581,6 +590,7 @@ def merge_to_final(engine):
                 src.[properties.date_entered_stage___ready_to_build],
                 src.[properties.date_entered_stage___testing],
                 src.[properties.date_entered_stage___under_construction],
+                src.[properties.hs_v2_date_entered_current_stage],
                 src.[properties.date_exited_advanced_development],
                 src.[properties.date_exited_early_development],
                 src.[properties.date_exited_potential_prospect],
