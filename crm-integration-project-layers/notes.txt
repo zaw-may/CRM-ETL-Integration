@@ -1,0 +1,8 @@
+"""
+Steps:
+0. Configure & connect DB
+1. Load HubSpot Client records
+2. Normalize & clean data
+3. Load into staging table
+4. MERGE into final table
+"""
