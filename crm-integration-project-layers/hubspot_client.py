@@ -1,3 +1,5 @@
+# Process03
+
 import logging
 from hubspot import HubSpot
 from hubspot.crm.deals import ApiException
@@ -28,17 +30,141 @@ def load_deals_json() -> pd.DataFrame:
                     limit=limit,
                     after=after,
                     archived=False,
-                    properties=["amount", "capacity_in_kwp", "closed_lost_reason__dropdown_", "date_entered_stage___advanced_development", "date_entered_stage___closed_lost", "date_entered_closing_advanced",
-                            "date_entered_stage___early_development", "date_entered_stage___potential_prospect", "date_entered_stage___project_approved", "date_entered_stage___mid_development",
-                            "date_entered_grid_checking_dpt", "date_entered_stage___operating", "date_entered_stage___ppa_1st_mark_up", "date_entered_preliminary_assessment", "date_entered_stage___ready_to_build", 
-                            "date_entered_stage___testing", "date_entered_stage___under_construction", "hs_v2_date_entered_current_stage",
-                            "date_exited_advanced_development", "date_exited_early_development", "date_exited_potential_prospect", "date_exited_project_approved", "date_exited_mid_development", 
-                            "date_exited_grid_checking_dpt", "date_exited_operating", "date_exited_ppa_1st_mark_up", "date_exited_preliminary_assessment", "date_exited_ready_to_build", "date_exited_testing",
-                            "date_exited_under_construction",
-                            "dealname", "dealstage", "dealtype", "final_capacity_in_kw", "hs_closed_amount", "hs_deal_stage_probability", "hs_forecast_amount", 
-                            "hs_num_associated_deal_registrations", "hs_num_associated_deal_splits", "pipeline", "ppa_capacity", "project_code", "project_country",
-                            "type_of_project_surface_type__", "hs_lastmodifieddate", 
-                            "business_unit", "capacity_in_mwp", "days_to_close", "hs_is_closed", "project_province", "hs_projected_amount"
+                    properties=[ 
+                          "capacity_in_kwp" # Initial: Required data fields from HubSpot 
+                        , "closed_lost_reason__dropdown_"
+                        , "closedate" 
+                        , "date_entered_stage___advanced_development"
+                        , "date_entered_stage___closed_lost"
+                        , "date_entered_closing_advanced"
+                        , "date_entered_stage___early_development"
+                        , "date_entered_stage___potential_prospect"
+                        , "date_entered_stage___project_approved"
+                        , "date_entered_stage___mid_development"
+                        , "date_entered_grid_checking_dpt"
+                        , "date_entered_stage___operating"
+                        , "date_entered_stage___ppa_1st_mark_up"
+                        , "date_entered_preliminary_assessment"
+                        , "date_entered_stage___ready_to_build"
+                        , "date_entered_stage___testing"
+                        , "date_entered_stage___under_construction"
+                        , "date_entered_bid_submitted"
+                        , "date_entered_non_binding_offer_early"
+                        , "date_entered_project_awarded"
+                        , "date_entered_binding_offer_spa_mid"
+                        , "date_entered_ppa_signed"
+                        , "date_entered_invoiced"
+                        , "expected_ppa_signature"
+                        , "hs_v2_date_entered_current_stage"
+                        , "cp_issued"
+                        , "date_exited_advanced_development"
+                        , "date_exited_closing_advanced"
+                        , "date_exited_early_development"
+                        , "date_exited_potential_prospect"
+                        , "date_exited_project_approved"
+                        , "date_exited_mid_development"
+                        , "date_exited_grid_checking_dpt"
+                        , "date_exited_operating"
+                        , "date_exited_ppa_1st_mark_up"
+                        , "date_exited_preliminary_assessment"
+                        , "date_exited_ready_to_build"
+                        , "date_exited_testing"
+                        , "date_exited_under_construction"
+                        , "date_exited_bid_submitted"
+                        , "date_exited_non_binding_offer_early"
+                        , "date_exited_project_awarded"
+                        , "date_exited_binding_offer_spa_mid"
+                        , "date_exited_ppa_signed"
+                        , "date_exited_invoiced"
+                        , "planned_date_of_invoicing"
+                        , "dealname"
+                        , "dealstage" # Join Key
+                        , "final_capacity_in_kw"
+                        , "hs_closed_amount"
+                        , "hs_deal_stage_probability"
+                        , "pipeline" # Join Key
+                        , "ppa_capacity"
+                        , "probability_of_closing"
+                        , "project_code"
+                        , "project_country"
+                        , "type_of_project_surface_type__"
+                        , "type_of_commitment"
+                        , "growth_type"
+                        , "hs_lastmodifieddate"
+                        , "business_unit"
+                        , "business_line"
+                        , "capacity_in_mwp"
+                        , "days_to_close"
+                        , "hs_is_closed"
+                        , "project_province"
+                        , "associated_company"
+                        , "included_in_mis"
+                        , "gps"
+                        , "technology"
+                        , "ma_greenfield__brownfield"
+                        , "ce_entity"
+                        , "hs_v2_date_entered_172697438" # Start: New DealStage Date
+                        , "hs_v2_date_entered_172697439"
+                        , "hs_v2_date_entered_172697440"
+                        , "hs_v2_date_entered_172697441"
+                        , "hs_v2_date_entered_172697443"
+                        , "hs_v2_date_entered_181472374"
+                        , "hs_v2_date_entered_183929950"
+                        , "hs_v2_date_entered_3271943924"
+                        , "hs_v2_date_entered_3275128565"
+                        , "hs_v2_date_entered_947733654"
+                        , "hs_v2_date_entered_947733655"
+                        , "hs_v2_date_entered_947733656"
+                        , "hs_v2_date_entered_947761553"
+                        , "hs_v2_date_entered_953835685"
+                        , "hs_v2_date_entered_953835686"
+                        , "hs_v2_date_entered_953835687"
+                        , "hs_v2_date_entered_953835688"
+                        , "hs_v2_date_entered_953835689"
+                        , "hs_v2_date_entered_953835691"
+                        , "hs_v2_date_entered_953840641"
+                        , "hs_v2_date_entered_962990195"
+                        , "hs_v2_date_entered_987141709"
+                        , "hs_v2_date_entered_987141711"
+                        , "hs_v2_date_entered_987141713"
+                        , "hs_v2_date_entered_987141714"
+                        , "hs_v2_date_entered_987141715"
+                        , "hs_v2_date_entered_989326996"
+                        , "hs_v2_date_entered_989326997"
+                        , "hs_v2_date_entered_989326998"
+                        , "hs_v2_date_entered_989326999"
+                        , "hs_v2_date_entered_997789966"
+                        , "hs_v2_date_exited_172697438"
+                        , "hs_v2_date_exited_172697439"
+                        , "hs_v2_date_exited_172697440"
+                        , "hs_v2_date_exited_172697441"
+                        , "hs_v2_date_exited_172697443"
+                        , "hs_v2_date_exited_181472374"
+                        , "hs_v2_date_exited_183929950"
+                        , "hs_v2_date_exited_3271943924"
+                        , "hs_v2_date_exited_3275128565"
+                        , "hs_v2_date_exited_947733654"
+                        , "hs_v2_date_exited_947733655"
+                        , "hs_v2_date_exited_947733656"
+                        , "hs_v2_date_exited_947761553"
+                        , "hs_v2_date_exited_953835685"
+                        , "hs_v2_date_exited_953835686"
+                        , "hs_v2_date_exited_953835687"
+                        , "hs_v2_date_exited_953835688"
+                        , "hs_v2_date_exited_953835689"
+                        , "hs_v2_date_exited_953835691"
+                        , "hs_v2_date_exited_953840641"
+                        , "hs_v2_date_exited_962990195"
+                        , "hs_v2_date_exited_987141709"
+                        , "hs_v2_date_exited_987141711"
+                        , "hs_v2_date_exited_987141713"
+                        , "hs_v2_date_exited_987141714"
+                        , "hs_v2_date_exited_987141715"
+                        , "hs_v2_date_exited_989326996"
+                        , "hs_v2_date_exited_989326997"
+                        , "hs_v2_date_exited_989326998"
+                        , "hs_v2_date_exited_989326999"
+                        , "hs_v2_date_exited_997789966" # End: New DealStage Date
                     ]
                 )
             
@@ -143,151 +269,171 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     logging.info("Cleaning data")
 
     # Ensure required columns exist
-    required_columns = [
-        "archived", "archived_at", "associations", "created_at", 
-        "id", "object_write_trace_id", "properties_with_history", "updated_at",
-        "properties.amount", "properties.capacity_in_kwp", "properties.closed_lost_reason__dropdown_", "properties.date_entered_stage___advanced_development",
-        "properties.date_entered_stage___closed_lost", "properties.date_entered_closing_advanced", 
-        "properties.date_entered_stage___early_development", "properties.date_entered_stage___potential_prospect", 
-        "properties.date_entered_stage___project_approved", "properties.date_entered_stage___mid_development",
-        "properties.date_entered_grid_checking_dpt", "properties.date_entered_stage___operating", "properties.date_entered_stage___ppa_1st_mark_up", 
-        "properties.date_entered_preliminary_assessment", "properties.date_entered_stage___ready_to_build", 
-        "properties.date_entered_stage___testing", "properties.date_entered_stage___under_construction", "properties.hs_v2_date_entered_current_stage",
-        "properties.date_exited_advanced_development", "properties.date_exited_early_development",
-        "properties.date_exited_potential_prospect", "properties.date_exited_project_approved", "properties.date_exited_mid_development", 
-        "properties.date_exited_grid_checking_dpt", "properties.date_exited_operating", "properties.date_exited_ppa_1st_mark_up", "properties.date_exited_preliminary_assessment", 
-        "properties.date_exited_ready_to_build", "date_exited_testing", "properties.date_exited_under_construction",                     
-        "properties.dealname", "properties.dealstage", "properties.dealtype",
-        "properties.final_capacity_in_kw", "properties.hs_closed_amount", "properties.hs_deal_stage_probability", "properties.hs_forecast_amount", 
-        "properties.hs_num_associated_deal_registrations", "properties.hs_num_associated_deal_splits", "properties.pipeline", "properties.ppa_capacity", 
-        "properties.project_code", "properties.project_country", "properties.type_of_project_surface_type__", "properties.hs_lastmodifieddate",
-        "properties.business_unit", "properties.capacity_in_mwp", "properties.days_to_close", "properties.hs_is_closed", 
-        "properties.project_province", "properties.hs_projected_amount", "pipeline_name", "stage_name", "stage_order"
+    required_other_columns = [
+        "archived", 
+        "archived_at", 
+        "associations", 
+        "created_at", 
+        "updated_at",
+        "properties.hs_lastmodifieddate",
+        "id", 
+        "object_write_trace_id", 
+        "properties_with_history", 
+        "properties.capacity_in_kwp", 
+        "properties.closed_lost_reason__dropdown_", 
+        "properties.closedate",
+        "properties.expected_ppa_signature", 
+        "properties.cp_issued",
+        "properties.date_of_invoicing", 
+        "properties.planned_date_of_invoicing",
+        "properties.dealname", 
+        "properties.dealstage", 
+        "properties.final_capacity_in_kw", 
+        "properties.hs_closed_amount", 
+        "properties.hs_deal_stage_probability",
+        "properties.pipeline", 
+        "properties.ppa_capacity", 
+        "properties.probability_of_closing",
+        "properties.project_code", 
+        "properties.project_country", 
+        "properties.type_of_project_surface_type__", 
+        "properties.type_of_commitment", 
+        "properties.growth_type",
+        "properties.business_unit", 
+        "properties.business_line",
+        "properties.capacity_in_mwp", 
+        "properties.days_to_close", 
+        "properties.hs_is_closed", 
+        "properties.project_province", 
+        "properties.associated_company", 
+        "properties.included_in_mis",
+        "properties.gps",
+        "properties.technology", 
+        "properties.ma_greenfield__brownfield",
+        "properties.ce_entity",
+        "pipeline_name", 
+        "stage_name", 
+        "stage_order",
     ]
 
-    for col in required_columns:
+    # Ensure required date columns exist
+    hs_v2_date_entered_cols = [c for c in df.columns if c.startswith("properties.hs_v2_date_entered_")]
+    hs_v2_date_exited_cols = [c for c in df.columns if c.startswith("properties.hs_v2_date_exited_")]
+    normal_date_entered_cols = [c for c in df.columns if c.startswith("properties.date_entered_")]
+    normal_date_exited_cols = [c for c in df.columns if c.startswith("properties.date_exited_")]
+    all_date_cols = hs_v2_date_entered_cols + hs_v2_date_exited_cols + normal_date_entered_cols + normal_date_exited_cols
+    required_all_columns = required_other_columns + all_date_cols
+
+    for col in required_all_columns:
         if col not in df.columns:
             df[col] = None
 
-    # Type conversions
-    df["properties.amount"] = pd.to_numeric(df["properties.amount"], errors="coerce")
-    df["properties.capacity_in_kwp"] = pd.to_numeric(df["properties.capacity_in_kwp"], errors="coerce")
-    df["properties.final_capacity_in_kw"] = pd.to_numeric(df["properties.final_capacity_in_kw"], errors="coerce")
-    df["properties.hs_closed_amount"] = pd.to_numeric(df["properties.hs_closed_amount"], errors="coerce")
-    df["properties.hs_deal_stage_probability"] = pd.to_numeric(df["properties.hs_deal_stage_probability"], errors="coerce")
-    df["properties.hs_forecast_amount"] = pd.to_numeric(df["properties.hs_forecast_amount"], errors="coerce")
-    df["properties.hs_num_associated_deal_registrations"] = pd.to_numeric(df["properties.hs_num_associated_deal_registrations"], errors="coerce")
-    df["properties.hs_num_associated_deal_splits"] = pd.to_numeric(df["properties.hs_num_associated_deal_splits"], errors="coerce")
+    # Type conversions for special date columns
+    for col in all_date_cols:
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+
+    # Type conversions for the rest columns
     df["properties.ppa_capacity"] = pd.to_numeric(df["properties.ppa_capacity"], errors="coerce")
+    df["properties.final_capacity_in_kw"] = pd.to_numeric(df["properties.final_capacity_in_kw"], errors="coerce")
+    df["properties.capacity_in_kwp"] = pd.to_numeric(df["properties.capacity_in_kwp"], errors="coerce")
     df["properties.capacity_in_mwp"] = pd.to_numeric(df["properties.capacity_in_mwp"], errors="coerce")
+    df["properties.hs_closed_amount"] = pd.to_numeric(df["properties.hs_closed_amount"], errors="coerce")
+    df["properties.probability_of_closing"] = pd.to_numeric(df["properties.probability_of_closing"], errors="coerce")
+    df["properties.hs_deal_stage_probability"] = pd.to_numeric(df["properties.hs_deal_stage_probability"], errors="coerce")
     df["properties.days_to_close"] = pd.to_numeric(df["properties.days_to_close"], errors="coerce")
-    df["properties.hs_projected_amount"] = pd.to_numeric(df["properties.hs_projected_amount"], errors="coerce")
-    df["stage_order"] = pd.to_numeric(df["stage_order"], errors="coerce")
-    df["properties.date_entered_stage___advanced_development"] = pd.to_datetime(df["properties.date_entered_stage___advanced_development"], errors="coerce")
-    df["properties.date_entered_stage___closed_lost"] = pd.to_datetime(df["properties.date_entered_stage___closed_lost"], errors="coerce")
-    df["properties.date_entered_closing_advanced"] = pd.to_datetime(df["properties.date_entered_closing_advanced"], errors="coerce")  
-    df["properties.date_entered_stage___early_development"] = pd.to_datetime(df["properties.date_entered_stage___early_development"], errors="coerce")
-    df["properties.date_entered_stage___potential_prospect"] = pd.to_datetime(df["properties.date_entered_stage___potential_prospect"], errors="coerce")
-    df["properties.date_entered_stage___project_approved"] = pd.to_datetime(df["properties.date_entered_stage___project_approved"], errors="coerce")
-    df["properties.date_entered_stage___mid_development"] = pd.to_datetime(df["properties.date_entered_stage___mid_development"], errors="coerce")
-    df["properties.date_entered_grid_checking_dpt"] = pd.to_datetime(df["properties.date_entered_grid_checking_dpt"], errors="coerce")
-    df["properties.date_entered_stage___operating"] = pd.to_datetime(df["properties.date_entered_stage___operating"], errors="coerce")
-    df["properties.date_entered_stage___ppa_1st_mark_up"] = pd.to_datetime(df["properties.date_entered_stage___ppa_1st_mark_up"], errors="coerce")
-    df["properties.date_entered_preliminary_assessment"] = pd.to_datetime(df["properties.date_entered_preliminary_assessment"], errors="coerce")
-    df["properties.date_entered_stage___ready_to_build"] = pd.to_datetime(df["properties.date_entered_stage___ready_to_build"], errors="coerce")
-    df["properties.date_entered_stage___testing"] = pd.to_datetime(df["properties.date_entered_stage___testing"], errors="coerce")
-    df["properties.date_entered_stage___under_construction"] = pd.to_datetime(df["properties.date_entered_stage___under_construction"], errors="coerce")
-    df["properties.hs_v2_date_entered_current_stage"] = pd.to_datetime(df["properties.hs_v2_date_entered_current_stage"], errors="coerce")
-    df["properties.date_exited_advanced_development"] = pd.to_datetime(df["properties.date_exited_advanced_development"], errors="coerce")
-    df["properties.date_exited_early_development"] = pd.to_datetime(df["properties.date_exited_early_development"], errors="coerce")
-    df["properties.date_exited_potential_prospect"] = pd.to_datetime(df["properties.date_exited_potential_prospect"], errors="coerce")
-    df["properties.date_exited_project_approved"] = pd.to_datetime(df["properties.date_exited_project_approved"], errors="coerce")
-    df["properties.date_exited_mid_development"] = pd.to_datetime(df["properties.date_exited_mid_development"], errors="coerce")
-    df["properties.date_exited_grid_checking_dpt"] = pd.to_datetime(df["properties.date_exited_grid_checking_dpt"], errors="coerce")
-    df["properties.date_exited_operating"] = pd.to_datetime(df["properties.date_exited_operating"], errors="coerce")
-    df["properties.date_exited_ppa_1st_mark_up"] = pd.to_datetime(df["properties.date_exited_mid_development"], errors="coerce")
-    df["properties.date_exited_preliminary_assessment"] = pd.to_datetime(df["properties.date_exited_preliminary_assessment"], errors="coerce")
-    df["properties.date_exited_ready_to_build"] = pd.to_datetime(df["properties.date_exited_ready_to_build"], errors="coerce")
-    df["properties.date_exited_testing"] = pd.to_datetime(df["properties.date_exited_testing"], errors="coerce")
-    df["properties.date_exited_under_construction"] = pd.to_datetime(df["properties.date_exited_under_construction"], errors="coerce")
+    #df["stage_order"] = pd.to_numeric(df["stage_order"], errors="coerce")
+    df["properties.expected_ppa_signature"] = pd.to_datetime(df["properties.expected_ppa_signature"], errors="coerce")
+    df["properties.cp_issued"] = pd.to_datetime(df["properties.cp_issued"], errors="coerce")  
+    df["properties.planned_date_of_invoicing"] = pd.to_datetime(df["properties.planned_date_of_invoicing"], errors="coerce")
+    df["properties.closedate"] = pd.to_datetime(df["properties.closedate"], errors="coerce")  
     df["properties.hs_lastmodifieddate"] = pd.to_datetime(df["properties.hs_lastmodifieddate"], errors="coerce")
     df["archived_at"] = pd.to_datetime(df["archived_at"], errors="coerce")
     df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
     df["updated_at"] = pd.to_datetime(df["updated_at"], errors="coerce")
 
-    return df[required_columns]
+    return df[required_all_columns]
 
 def normalize_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    logging.info("Data Normalization")
+
+    logging.info("Data Normalization with schema")
 
     schema = {
-        "archived": "string",
-        "archived_at": "datetime64[ns]",
-        "associations": "string",
-        "created_at": "datetime64[ns]",
-        "id": "string",
+        "id": "string", 
         "object_write_trace_id": "string",
         "properties_with_history": "string",
-        "updated_at": "datetime64[ns]",
-        "properties.amount": "float",
-        "properties.capacity_in_kwp": "float",
-        "properties.closed_lost_reason__dropdown_": "string",
-        "properties.date_entered_stage___advanced_development": "datetime64[ns]",
-        "properties.date_entered_stage___closed_lost": "datetime64[ns]",
-        "properties.date_entered_closing_advanced": "datetime64[ns]",
-        "properties.date_entered_stage___early_development": "datetime64[ns]",
-        "properties.date_entered_stage___potential_prospect": "datetime64[ns]",
-        "properties.date_entered_stage___project_approved": "datetime64[ns]",
-        "properties.date_entered_stage___mid_development": "datetime64[ns]",
-        "properties.date_entered_grid_checking_dpt": "datetime64[ns]",
-        "properties.date_entered_stage___operating": "datetime64[ns]",
-        "properties.date_entered_stage___ppa_1st_mark_up": "datetime64[ns]",
-        "properties.date_entered_preliminary_assessment": "datetime64[ns]",
-        "properties.date_entered_stage___ready_to_build": "datetime64[ns]",
-        "properties.date_entered_stage___testing": "datetime64[ns]",
-        "properties.date_entered_stage___under_construction": "datetime64[ns]",
-        "properties.hs_v2_date_entered_current_stage": "datetime64[ns]",
-        "properties.date_exited_advanced_development": "datetime64[ns]",
-        "properties.date_exited_early_development": "datetime64[ns]",
-        "properties.date_exited_potential_prospect": "datetime64[ns]",
-        "properties.date_exited_project_approved": "datetime64[ns]",
-        "properties.date_exited_mid_development": "datetime64[ns]",
-        "properties.date_exited_grid_checking_dpt": "datetime64[ns]",
-        "properties.date_exited_operating": "datetime64[ns]",
-        "properties.date_exited_ppa_1st_mark_up": "datetime64[ns]",
-        "properties.date_exited_preliminary_assessment": "datetime64[ns]",
-        "properties.date_exited_ready_to_build": "datetime64[ns]",
-        "properties.date_exited_testing": "datetime64[ns]",
-        "properties.date_exited_under_construction": "datetime64[ns]",
-        "properties.dealname": "string",
-        "properties.dealstage": "string",
-        "properties.dealtype": "string",
-        "properties.final_capacity_in_kw": "float",
-        "properties.hs_closed_amount": "float",
-        "properties.hs_deal_stage_probability": "float",
-        "properties.hs_forecast_amount": "float",
-        "properties.hs_num_associated_deal_registrations": "int64",
-        "properties.hs_num_associated_deal_splits": "int64",
-        "properties.pipeline": "string",
-        "properties.ppa_capacity": "float",
+        "associations": "string",
+        "properties.associated_company": "string",
         "properties.project_code": "string",
-        "properties.project_country": "string",
-        "properties.type_of_project_surface_type__": "string",
-        "properties.hs_lastmodifieddate": "datetime64[ns]",
+        "properties.dealname": "string",
+        "properties.pipeline": "string",
+        "pipeline_name": "string",
+        "properties.dealstage": "string",   
+        "stage_name": "string",
+        "stage_order": "string",
+        "properties.ce_entity": "string",
         "properties.business_unit": "string",
+        "properties.business_line": "string",
+        "properties.project_country": "string",
+        "properties.project_province": "string",    
+        "properties.ppa_capacity": "float",
+        "properties.final_capacity_in_kw": "float",
+        "properties.capacity_in_kwp": "float",
         "properties.capacity_in_mwp": "float",
+        "properties.hs_closed_amount": "float",
+        "properties.probability_of_closing": "float",
+        "properties.hs_deal_stage_probability": "float",
+        "properties.technology": "string",
+        "properties.ma_greenfield__brownfield": "string",
+        "properties.growth_type": "string",
+        "properties.type_of_project_surface_type__": "string",
+        "properties.type_of_commitment": "string",
+        "properties.closed_lost_reason__dropdown_": "string",
         "properties.days_to_close": "int64",
         "properties.hs_is_closed": "string", 
-        "properties.project_province": "string",
-        "properties.hs_projected_amount": "float",
-        "pipeline_name": "string",
-        "stage_name": "string",
-        "stage_order": "int64"
-    }
+        "properties.included_in_mis": "string",
+        "properties.gps": "string", 
+        "archived": "string",
+        "archived_at": "datetime64[ns]",
+        "created_at": "datetime64[ns]",
+        "updated_at": "datetime64[ns]",
+        "properties.hs_lastmodifieddate": "datetime64[ns]",
+        "properties.closedate": "datetime64[ns]",
+        "properties.expected_ppa_signature": "datetime64[ns]",
+        "properties.cp_issued": "datetime64[ns]",
+        "properties.planned_date_of_invoicing": "datetime64[ns]",
+}
 
+    hs_v2_date_entered_cols = [c for c in df.columns if c.startswith("properties.hs_v2_date_entered_")]
+    hs_v2_date_exited_cols = [c for c in df.columns if c.startswith("properties.hs_v2_date_exited_")]
+    normal_date_entered_cols = [c for c in df.columns if c.startswith("properties.date_entered_")]
+    normal_date_exited_cols = [c for c in df.columns if c.startswith("properties.date_exited_")]
+
+    all_date_cols = (
+        hs_v2_date_entered_cols +
+        hs_v2_date_exited_cols +
+        normal_date_entered_cols +
+        normal_date_exited_cols
+    )
+
+    # Add date columns to schema
+    schema.update({col: "datetime64[ns]" for col in all_date_cols})
+
+    # Validate schema items
+    # print("Schema Items: ", schema.items())
+
+    # ensure all columns exist
     for col, dtype in schema.items():
         if col not in df.columns:
-            df[col] = None
-        df[col] = df[col].astype(dtype, errors="ignore")
+            if dtype == "datetime64[ns]":
+                df[col] = pd.NaT
+            else:
+                df[col] = pd.NA
 
+    for col, dtype in schema.items():
+        if dtype == "datetime64[ns]":
+            df[col] = pd.to_datetime(df[col], errors="coerce")
+        else:
+            df[col] = df[col].astype(dtype)
+
+    
     return df[list(schema.keys())]
