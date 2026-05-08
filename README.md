@@ -1,4 +1,4 @@
-### Overview
+## Overview
 
 This repository demonstrates a practical ETL pipeline that extracts CRM data from HubSpot using the official HubSpot API and HubSpot CLI, then loads the data into a SQL Server database.
 
