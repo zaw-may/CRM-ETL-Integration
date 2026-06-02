@@ -1,9 +1,9 @@
 """
 Steps:
-Process01. Configure & connect DB
-Process02. Load HubSpot Client records
-Process03. Normalize & clean data
-Process04. Load into staging table
-Process05. MERGE into final table
+Process01. Configure & connect DB: config.py
+Process02. Load HubSpot Client records: db.py
+Process03. Normalize & clean data: hubspot_client.py
+Process04. Load into staging table: mssql_processing.py
+Process05. MERGE into final table: main.py
 """
 *** REMARK: The .env file is required in this project folder. ***
